@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     ALLOW_METHODS: List[str]
     ALLOW_HEADERS: List[str]
 
+    OFFICES_URL: str
     PREREG_URL: str
     APP_PORT: int
 

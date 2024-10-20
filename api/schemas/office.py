@@ -5,7 +5,7 @@ from pydantic import BaseModel
 class ServiceSchema(BaseModel):
     id: str
     name: str
-    services: List["ServiceSchema"] = []
+    children: List["ServiceSchema"] = []
 
 
 class WindowSchema(BaseModel):
@@ -19,4 +19,4 @@ class OfficeResponse(BaseModel):
     name: str
     address: str
     services: List[ServiceSchema] = []
-    windows: List[ServiceSchema] = []
+    windows: List[WindowSchema] = []

@@ -89,6 +89,14 @@ def get_current(session: Session, department_id: str, window_id: str):
     return current
 
 
+def add_to_queue(root: List[ServiceSchema], service: ServiceSchema):
+    if len(service.services) == 0:
+        root.append(service)
+    else:
+        for s in service.services:
+            add_to_queue(root, s)
+
+
 @router.post("/department/{department_id}/windows/{window_id}/request-new")
 async def request_new_item(
     department_id: str = Path(..., description="The ID of the department"),
@@ -101,10 +109,11 @@ async def request_new_item(
 
     print("Отдел найден: ", office)
 
-    services = None
+    services = []
     for win in office.windows:
         if win.id == window_id:
-            services = win.services
+            for s in win.services:
+                add_to_queue(services, s)
 
     with Session(engine) as session:
         current = get_current(session, department_id=department_id, window_id=window_id)

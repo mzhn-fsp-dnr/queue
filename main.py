@@ -2,7 +2,7 @@ from api.conifg import conf_settings
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from api.database import create_db_and_tables
-from api.routers import queue, window
+from api.routers import queue, window, analytics
 
 create_db_and_tables()
 
@@ -18,6 +18,7 @@ def setup() -> FastAPI:
     )
     app.include_router(queue.router)
     app.include_router(window.router)
+    app.include_router(analytics.router)
     return app
 
 

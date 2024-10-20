@@ -92,8 +92,8 @@ def analytics_department_awg_wait_time(department_id: str):
         print("--------------------------------res-----------------------------")
         return [{"hour": col[0], "avg_wait_time": str(col[1]) } for col in res]
         
-@router.get("/total")
-def analytics_department_all_time():
+@router.get("/department/{department_id}/total")
+def analytics_department_all_time(department_id: str):
     # Текущая дата
     today = datetime.datetime.now()
     # Дата 30 дней назад
@@ -119,7 +119,7 @@ def analytics_department_all_time():
                 )
             ).label("in_person_visits"),
         )
-        .where(QueueItem.creation_time >= thirty_days_ago, QueueItem.creation_time <= today)
+        .where(QueueItem.creation_time >= thirty_days_ago, QueueItem.creation_time <= today, QueueItem.department_id== department_id)
         .group_by(func.date(QueueItem.creation_time))
         .order_by(func.date(QueueItem.creation_time))
     )

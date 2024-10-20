@@ -5,10 +5,14 @@ from datetime import datetime
 
 from pydantic import BaseModel
 
+
 class QueueItemCreate(BaseModel):
     service_id: str
     ticket_type: TicketTypeEnum
-    date_pre_reg: Optional[datetime] = Field(None, description="Обязателен для предварительной записи")
+    date_pre_reg: Optional[datetime] = Field(
+        None, description="Обязателен для предварительной записи"
+    )
+
 
 class QueueItemUpdate(BaseModel):
     service_id: Optional[str] = None
@@ -17,6 +21,7 @@ class QueueItemUpdate(BaseModel):
     employee: Optional[str] = None
     start_time: Optional[datetime] = None
     end_time: Optional[datetime] = None
+
 
 class RequestNewQueueItem(BaseModel):
     services: List[str]

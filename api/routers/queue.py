@@ -8,19 +8,43 @@ from api.database import engine
 
 import datetime
 
+from api.services import prereg_service
+
 router = APIRouter()
 
 
 @router.post("/department/{department_id}/queue")
 async def add_to_queue(department_id: str, item: QueueItemCreate):
-    if item.ticket_type == TicketTypeEnum.PRE_REG and item.date_pre_reg is None:
-        raise HTTPException(status_code=400, detail="ID для предварительной записи обязателен для типа ПЗ")
+    # if item.ticket_type == TicketTypeEnum.PRE_REG and item.date_pre_reg is None:
+    #     raise HTTPException(
+    #         status_code=400,
+    #         detail="ID для предварительной записи обязателен для типа ПЗ",
+    #     )
+
+    service_id = item.service_id
+    date: datetime = item.date_pre_reg  # type: ignore
+
+    if item.ticket_type == TicketTypeEnum.PRE_REG:
+        prereg = prereg_service.get(department_id, item.service_id)
+        if not prereg:
+            raise HTTPException(
+                status_code=400,
+                detail="prereg not found",
+            )
+
+        service_id = prereg.service_id
+        date = prereg.assigned_to
 
     with Session(engine) as session:
-        statement = select(QueueItem).where(
-            QueueItem.department_id == department_id,
-            func.cast(QueueItem.creation_time, Date) == datetime.date.today(),
-        ).order_by(col(QueueItem.ticket_code).desc()).limit(1)
+        statement = (
+            select(QueueItem)
+            .where(
+                QueueItem.department_id == department_id,
+                func.cast(QueueItem.creation_time, Date) == datetime.date.today(),
+            )
+            .order_by(col(QueueItem.ticket_code).desc())
+            .limit(1)
+        )
 
         last_item = session.exec(statement).one_or_none()
 
@@ -32,10 +56,10 @@ async def add_to_queue(department_id: str, item: QueueItemCreate):
         queue_item = QueueItem(
             department_id=department_id,
             ticket_code=new_ticket_code,
-            service_id=item.service_id,
+            service_id=service_id,
             status=StatusEnum.WAITING,  # Status is WAITING by default
             ticket_type=item.ticket_type,
-            date_pre_reg=item.date_pre_reg
+            date_pre_reg=date,
         )
 
         session.add(queue_item)
@@ -44,9 +68,12 @@ async def add_to_queue(department_id: str, item: QueueItemCreate):
             session.refresh(queue_item)
         except Exception as e:
             session.rollback()
-            raise HTTPException(status_code=400, detail=f"Error adding to queue: {str(e)}")
+            raise HTTPException(
+                status_code=400, detail=f"Error adding to queue: {str(e)}"
+            )
 
     return {"message": "Item added to queue", "item": queue_item}
+
 
 @router.put("/department/{department_id}/queue/{item_index}")
 async def update_queue_item(
@@ -68,18 +95,21 @@ async def update_queue_item(
         update_data = item.dict(exclude_unset=True)
 
         allowed_updates = [
-            "window", 
-#            "start_time", 
-#            "end_time", 
-            "status", 
-            "service_id", 
-            "employee"
+            "window",
+            #            "start_time",
+            #            "end_time",
+            "status",
+            "service_id",
+            "employee",
         ]
         for key, value in update_data.items():
             if key in allowed_updates:
                 setattr(queue_item, key, value)
 
-                if key == "status" and queue_item.status in [StatusEnum.SERVED, StatusEnum.SKIPPED]:
+                if key == "status" and queue_item.status in [
+                    StatusEnum.SERVED,
+                    StatusEnum.SKIPPED,
+                ]:
                     queue_item.end_time = datetime.datetime.now()
 
         try:
@@ -87,7 +117,9 @@ async def update_queue_item(
             session.refresh(queue_item)
         except Exception as e:
             session.rollback()
-            raise HTTPException(status_code=400, detail=f"Error updating queue item: {str(e)}")
+            raise HTTPException(
+                status_code=400, detail=f"Error updating queue item: {str(e)}"
+            )
 
     return {"message": "Queue item updated", "item": queue_item}
 

@@ -12,22 +12,26 @@ services:
       - pg-data:/var/lib/postgresql/data
     ports:
       - ${PG_PORT}:5432
-  
-  app:
-    container_name: app
-    build:
-      context: .
-      dockerfile: ./Dockerfile
-    ports:
-      - 8000:8000
-    environment:
-      PG_USER: ${PG_USER}
-      PG_PASS: ${PG_PASS}
-      PG_NAME: ${PG_NAME}
-      PG_HOST: pg
-      PG_PORT: 5432
-    depends_on:
-     - pg
+
+  # app:
+  #   container_name: app
+  #   build:
+  #     context: .
+  #     dockerfile: ./Dockerfile
+  #     args:
+  #       - APP_PORT=${APP_PORT}
+  #   ports:
+  #     - ${APP_PORT}:${APP_PORT}
+  #   env_file:
+  #     - .env
+  #   environment:
+  #     PG_USER: ${PG_USER}
+  #     PG_PASS: ${PG_PASS}
+  #     PG_NAME: ${PG_NAME}
+  #     PG_HOST: pg
+  #     PG_PORT: 5432
+  #   depends_on:
+  #     - pg
 
 volumes:
   pg-data:

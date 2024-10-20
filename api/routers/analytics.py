@@ -1,6 +1,6 @@
 from fastapi import APIRouter
-from api.models.queue_item import QueueItem
-from sqlmodel import Session, select, func, literal, union_all, cast, Float, text, extract, Interval
+from api.models.queue_item import QueueItem, TicketTypeEnum
+from sqlmodel import Session, case, select, func, literal, union_all, cast, Float, text, extract, Interval
 from api.database import engine
 
 import datetime
@@ -92,3 +92,49 @@ def analytics_department_awg_wait_time(department_id: str):
         print("--------------------------------res-----------------------------")
         return [{"hour": col[0], "avg_wait_time": str(col[1]) } for col in res]
         
+@router.get("/total")
+def analytics_department_all_time():
+    # Текущая дата
+    today = datetime.datetime.now()
+    # Дата 30 дней назад
+    thirty_days_ago = today - datetime.timedelta(days=30)
+
+    with Session(engine) as session:
+        
+    # Запрос для получения статистики
+        query = (
+        select(
+            func.date(QueueItem.creation_time).label("visit_date"),
+            func.count(QueueItem.id).label("total_visits"),
+            func.sum(
+                case(
+                    (QueueItem.ticket_type == TicketTypeEnum.PRE_REG, 1),
+                    else_=0
+                )
+            ).label("pre_reg_visits"),
+            func.sum(
+                case(
+                    (QueueItem.ticket_type == TicketTypeEnum.IN_PERSON, 1),
+                    else_=0
+                )
+            ).label("in_person_visits"),
+        )
+        .where(QueueItem.creation_time >= thirty_days_ago, QueueItem.creation_time <= today)
+        .group_by(func.date(QueueItem.creation_time))
+        .order_by(func.date(QueueItem.creation_time))
+    )
+    
+    results = session.exec(query).all()
+    print(results)
+    # Преобразование результатов в читаемый формат
+    stats = [
+        {
+            "date": result.visit_date,
+            "total_visits": result.total_visits,
+            "pre_reg_visits": result.pre_reg_visits,
+            "in_person_visits": result.in_person_visits,
+        }
+        for result in results
+    ]
+    
+    return stats
